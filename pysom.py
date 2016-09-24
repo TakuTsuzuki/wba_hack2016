@@ -3,6 +3,7 @@ pysom.py is a python script for self-organizing map (SOM).
 """
 
 import numpy as np
+from sklearn.datasets import fetch_mldata
 import matplotlib.pyplot as plt
 
 # learning paras.
@@ -27,7 +28,7 @@ yy, xx = np.ogrid[0:mod_w, 0:mod_w]
 sigma_mod = sigma_max - sigma_min
 
 # load training data
-mnist=np.load('mnist_train_image.npy')
+mnist=fetch_mldata('MNIST original', data_home=".")
 
 # init weights
 w = np.random.rand(mod_w, mod_w, rf_len) # init with random values
