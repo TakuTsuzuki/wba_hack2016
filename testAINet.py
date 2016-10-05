@@ -4,6 +4,7 @@
 
 import numpy as np
 import chainer
+from chainer import cuda
 
 import active_inference as ai
 
@@ -45,7 +46,6 @@ class Eye(object):
         if self.h < self.y + self.window:
             self.y = self.h - self.window
 
-xp = np
 world = np.load('datagen/mnist_matrix/mnist_matrix.npy')
 
 # define network
@@ -60,8 +60,16 @@ fe = ai.FreeEnergy(ainet)
 optimizer = chainer.optimizers.Adam()
 optimizer.setup(fe)
 
+# to gpu
+device = 0
+xp = cuda.cupy if device >= 0 else np
+cuda.get_device(device).use()
+fe.to_gpu()
+
+# define body
 eye = Eye(world, np.sqrt(sensor))
 
+# run simulation
 n_epoch = 10
 length_epoch = 100
 n_bprop = 10

@@ -108,8 +108,10 @@ class FreeEnergy(chainer.Chain):
             self.theta_x = (x_mu, x_var)
             self.theta_z = (z_mu, z_var)
             self.theta_a = (a_mu, a_var)
-            self.recon_loss = chainer.Variable(np.array(0).astype(np.float32))
-            self.loss = chainer.Variable(np.array(0).astype(np.float32))
+            self.recon_loss = chainer.Variable(self.xp.array(0)
+                                               .astype(x[0].data.dtype))
+            self.loss = chainer.Variable(self.xp.array(0)
+                                         .astype(x[0].data.dtype))
             return self.loss
 
         recon_loss = F.gaussian_nll(x, self.theta_x[0], self.theta_x[1])
