@@ -1,3 +1,4 @@
+import numpy as np
 import chainer
 import chainer.functions as F
 import chainer.links as L
@@ -92,18 +93,29 @@ class FreeEnergy(chainer.Chain):
         super(FreeEnergy, self).__init__(net=net)
         self.base_decay = base_decay
         self.base = None
-        self.x = None
+        self.a = None
+        self.theta_x = None
+        self.theta_z = None
+        self.theta_a = None
         self.recon_loss = None
         self.loss = None
 
     def __call__(self, x):
-        self.x = x
+        a, (x_mu, x_var), (z_mu, z_var), (a_mu, a_var) = self.net(x)
 
-        a, (x_mu, x_var), (z_mu, z_var), (a_mu, a_var) \
-            = self.net(self.x)
+        if self.a is None:
+            self.a = a
+            self.theta_x = (x_mu, x_var)
+            self.theta_z = (z_mu, z_var)
+            self.theta_a = (a_mu, a_var)
+            self.recon_loss = chainer.Variable(self.xp.array(0)
+                                               .astype(x[0].data.dtype))
+            self.loss = chainer.Variable(self.xp.array(0)
+                                         .astype(x[0].data.dtype))
+            return self.loss
 
-        recon_loss = F.gaussian_nll(self.x, x_mu, x_var)
-        kl_loss = F.gaussian_kl_divergence(z_mu, z_var)
+        recon_loss = F.gaussian_nll(x, self.theta_x[0], self.theta_x[1])
+        kl_loss = F.gaussian_kl_divergence(self.theta_z[0], self.theta_z[1])
         expect_loss = recon_loss + kl_loss
 
         # baseline
@@ -115,9 +127,12 @@ class FreeEnergy(chainer.Chain):
                         + (1-self.base_decay) * eloss
         # action loss
         act_loss = (eloss - self.base) \
-            * F.gaussian_nll(chainer.Variable(a.data), a_mu, a_var)
+            * F.gaussian_nll(chainer.Variable(self.a.data),
+                             self.theta_a[0], self.theta_a[1])
 
-        self.x = x
+        self.theta_x = (x_mu, x_var)
+        self.theta_z = (z_mu, z_var)
+        self.theta_a = (a_mu, a_var)
         self.recon_loss = recon_loss
         self.loss = expect_loss
         return expect_loss + act_loss
