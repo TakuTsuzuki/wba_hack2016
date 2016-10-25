@@ -3,9 +3,10 @@
 # http://docs.chainer.org/en/v1.15.0.1/tutorial/recurrentnet.html
 
 import numpy as np
+import matplotlib.pyplot as plt
 import chainer
 
-import active_inference as ai
+import active_inference2 as ai
 
 
 class Eye(object):
@@ -46,14 +47,14 @@ class Eye(object):
             self.y = self.h - self.window
 
 xp = np
-world = np.load('datagen/mnist_matrix/mnist_matrix.npy')
+world = np.load('datagen/mnist_matrix/world1.npy')
 
 # define network
 sensor = 784
 hidden = 100
 action = 2
-encoder = ai.REncoder(sensor, hidden)
-decoder = ai.RDecoder(hidden, sensor)
+encoder = ai.Encoder(sensor, hidden)
+decoder = ai.Decoder(hidden, sensor)
 action = ai.Action(sensor, hidden, action)
 ainet = ai.ActiveInference(encoder, decoder, action)
 fe = ai.FreeEnergy(ainet)
@@ -64,24 +65,25 @@ eye = Eye(world, np.sqrt(sensor))
 
 n_epoch = 10
 length_epoch = 100
-n_bprop = 10
-for epoch in range(1, n_epoch):
+n_bprop = 1
+for epoch in range(0, n_epoch):
     print('epoch', epoch)
 
     sum_loss = 0
     sum_recon_loss = 0
     dx, dy = 0, 0
     loss = 0
-    ainet.reset_state()
     fe.cleargrads()
+    
     for i in range(length_epoch):
         glim = eye.glimpse(dx, dy).reshape(1, sensor).astype(np.float32)
         x = chainer.Variable(xp.asarray(glim))
         loss += fe(x)
-        action = ainet.a.data
+        action = ainet.a
         dx = int(action[0][0])
         dy = int(action[0][1])
-        if (i + 1) % n_bprop == 0:
+        
+        if i != 0 & (i + 1) % n_bprop == 0:
             fe.cleargrads()
             loss.backward()
             loss.unchain_backward()
@@ -93,3 +95,13 @@ for epoch in range(1, n_epoch):
     print('mean loss={}, mean reconstruction loss={}'
           .format(sum_loss / length_epoch,
                   sum_recon_loss / length_epoch))
+
+# original images and reconstructed images
+def save_images(x, filename):
+    fig, ax = plt.subplots(3, 3, figsize=(9, 9), dpi=100)
+    for ai, xi in zip(ax.flatten(), x):
+        ai.imshow(xi.reshape(28, 28))
+    fig.savefig(filename)
+
+_, _, x_mu, _, _ = ainet(x)
+save_images(x_mu.data, 'train_reconstructed')
