@@ -1,1 +1,2 @@
-# wba_hack2016
+# Attention Control based on FEP(Free energy principle)
+hogehogefugafuga
